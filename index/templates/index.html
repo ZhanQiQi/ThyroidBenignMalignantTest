@@ -1,0 +1,354 @@
+{% include 'header/header.html' %}
+{% load staticfiles %}
+
+
+<div class="home">
+    <div class="div-inline left" style="margin-left: 10px;">
+{#        TODO#}
+{#        步骤信息#}
+        <h1 class="font-color" style="margin-top: 0px;">
+            甲状腺检测
+        </h1>
+
+
+        <select id="mhd" class="button button-rounded button-small" style="margin-bottom: 10px; width: 95.5%; font-size: medium;">
+        </select>
+
+        <br>
+
+        <button id="loaddata" class="button button-rounded button-small" style="font-size: medium;color:black" onclick="openFile('file')">打开</button>
+        <Form id="uploadForm" method="post" action="/upload/" enctype ="multipart/form-data" hidden>
+			{% csrf_token %}
+            <input type="file" id="file" hidden accept="image/*" />
+        </Form>
+        <button id="uploadbtn" onclick="refreshImg()" class="button button-rounded button-small" style="font-size: medium;color:grey"> 加载 </button>
+        <!--加载dicom文件
+            <button id="uploadbtn"  class="button button-rounded button-small" style="font-size: medium;color:grey"> 加载 </button>
+        -->
+
+        <h3 style="margin-top: 10px; ">步骤向导</h3>
+
+        <ul style="padding-left: 0px; ">
+            <li><font size="2">步骤一：打开并加载数据</font></li>
+            <hr style="border: 0; border-top:2px dashed gray;"/>
+            <li><font size="2">步骤二：诊断良恶性</font></li>
+            <hr style="border: 0; border-top:2px dashed gray;"/>
+            <li><font size="2">步骤三：打印输出结果</font></li>
+            <hr style="border: 0; border-top:2px dashed gray;"/>
+        </ul>
+
+    <div style="height: 1px;"></div>
+
+    <h3>检测结果</h3>
+        <table class="table" cellspacing="0" style=" text-align: left; width: 100%" >
+
+            <thead>
+                <tr>
+                    <th class="table-head">良性  </th>
+                    <th class="table-head">恶性  </th>
+                    <th class="table-head">不确定  </th>
+                </tr>
+            </thead>
+
+        </table>
+
+        <div style="overflow: auto; height: 120px;">
+
+        <table class="table" cellspacing="0" cellpadding="0"  style="text-align: left; width: 100%; border-spacing:0px 3px;">
+
+            <thead>
+                <tr>
+                    <th class="table-head"></th>
+                    <th class="table-head"></th>
+                    <th class="table-head"></th>
+                </tr>
+            </thead>
+
+            <tbody id="resultArea">
+
+                {% for foo in nodules %}
+
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+
+        </div>
+
+        <h3>患者信息</h3>
+
+        <form name="patientInfo" id="patientInfo">
+            <div class="layui-form-item">
+                <label class="layui-form-label">患者编号:</label>
+                <div class="layui-input-block" style="width:50%">
+                    <input type="text" name="patientID" placeholder="请输入患者编号" autocomplete="off" class="layui-input">
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label">患者姓名:</label>
+                <div class="layui-input-block" style="width:50%">
+                    <input type="text" name="patientName" placeholder="请输入患者姓名" autocomplete="off" class="layui-input">
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label">患者性别:</label>
+                <div class="layui-input-block" style="width:50%">
+                    <select name="patientGender" class="layui-select">
+                        <option value="男">男</option>
+                        <option value="女">女</option>
+                    </select>  
+                </div> 
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label">患者年龄:</label>
+                <div class="layui-input-block" style="width:50%">
+                    <input type="text" name="patientAge" placeholder="请输入患者年龄" autocomplete="off" class="layui-input">
+                </div>
+            </div>
+        </form>
+
+        <div style="bottom: 2%; position: absolute; height: fit-content;">
+            <button onclick="AITreat()" id="AITreat" href ="AI" class="button button-rounded button-small" style="font-size: medium;color:grey">AI诊断</button>
+            <button id="printBtn" class="button button-rounded button-small" style="font-size: medium;color:grey">
+                打印
+            </button>
+        </div>
+
+
+    </div>
+
+    <div class="div-inline right" style="width: 20px !important;">
+{#        TODO#}
+{#        路径#}
+
+    </div>
+
+
+
+    <div class="div-inline middle">
+        <div class="img-block">
+            <div style="text-align: center">
+                <img id="ct-img" class="img" src="" alt="">
+                <!--加载dicom文件
+                    <div id="dicomImage" class="img">
+                -->
+            </div>
+        </div>
+    </div>
+
+</div>
+
+
+
+<script>
+    pics = [];
+    srcs = [];
+    /* 加载dicom文件
+    temppic = null;
+    cornerstoneWADOImageLoader.external.cornerstone = cornerstone;
+    // 加载和显示图像
+    function loadAndViewImage(imageId) {
+        var element = document.getElementById('dicomImage');
+        cornerstone.loadAndCacheImage(imageId).then(function (image) {
+            var viewport = cornerstone.getDefaultViewportForImage(element, image);
+            cornerstone.displayImage(element, image, viewport);
+        }, function (err) {
+            console.log(imageId)
+            console.log(err);
+        });
+    }
+
+    var element = document.getElementById('dicomImage');
+    cornerstone.enable(element);
+
+    // 监听按钮 拼接url 调用 loadAndViewImage 函数
+    document.getElementById('uploadbtn').addEventListener('click', function (e) {
+        var pic = $('#mhd').val()
+        if(pic == null){
+            alert("请选择要加载的文件")
+            return
+        }
+        console.log(pic)
+        $('#AITreat')[0].style.color='black'
+        var temp = pics.indexOf(pic)
+        let url = 'load/?pic='+pic
+        // 拼接url
+        url = "wadouri:" + url;
+        // 调用这个函数加载像,和激活工具
+        loadAndViewImage(url);
+    });
+    */
+
+
+    function openFile(id) {
+        $("#"+id).trigger("click");
+    }
+
+    $(function(){
+        $("#file").change(function(e){
+            var file = e.target.files[0]
+            var reads = new FileReader();
+            var formdata = new FormData();
+            formdata.append("csrfmiddlewaretoken",'{{ csrf_token }}');
+            formdata.append('upload',e.target.files[0])
+            $.ajax({
+                url: '/upload/',
+                type: 'POST',
+                cache: false,
+                data: formdata,
+                processData: false,
+                contentType: false,
+                success: function(res){
+                    var temp = pics.indexOf(res)
+                    if(temp== -1){
+                        pics.push(res)
+                        reads.readAsDataURL(file);
+                        reads.onload = function(e) {
+                            srcs.push(this.result)
+                        }
+                        $('#mhd')[0].innerHTML += '<option value ='+res+'>'+res+'</option>'
+                        $('#uploadbtn')[0].style.color='black'
+                        $('#AITreat')[0].style.color='grey'
+                        $('#printBtn')[0].innerHTML="打印"
+                        $('#resultArea')[0].innerHTML=""
+                    }else{
+                        reads.readAsDataURL(file);
+                        reads.onload = function(e) {
+                            srcs[temp]=this.result
+                        }
+                    }
+                    $('#mhd').val(res)
+                    console.log(pics)
+                }
+            })
+            .done(function(res) {
+                //console.log(res)
+            })
+            .fail(function(res) {console.log(res)});
+        })
+    })
+
+    $(function(){
+        $("#mhd").change(function(e){
+            $('#uploadbtn')[0].style.color='black'
+            $('#AITreat')[0].style.color='grey'
+            $('#printBtn')[0].innerHTML="打印"
+            $('#resultArea')[0].innerHTML=""
+        })
+    })
+
+    function refreshImg() {
+        var pic = $('#mhd').val()
+        if(pic == null){
+            alert("请选择要加载的文件")
+            return
+        }
+        console.log(pic)
+        var temp = pics.indexOf(pic)
+        document.getElementById("ct-img").src = srcs[temp]
+        $('#AITreat')[0].style.color='black'
+        /*
+        var formdata = new FormData();
+        formdata.append("csrfmiddlewaretoken",'{{ csrf_token }}');
+        formdata.append("src",pic)
+        $.ajax({
+            url: '/load_img/',
+            type: 'POST',
+            cache: false,
+            data: formdata,
+            processData: false,
+            contentType: false,
+            success: function(res){
+                console.log(res)
+            }
+         })
+        .done(function(res) {
+            console.log(res)
+        })
+        .fail(function(res) {console.log(res)});
+        */
+    }
+
+
+    function AITreat() {
+        if($('#AITreat')[0].style.color==='grey'){
+            return 
+        }
+        let ai_btn = $('#AITreat');
+        let resultArea = $('#resultArea');
+        temppic = $('#mhd').val();
+        if (temppic === null){
+            confirm("暂时没有待处理的图片。请先打开图片,并加载要处理的图片");
+            resultArea.html('<tr><td colspan="4" rowspan="3" style="color: red;">暂时没有待处理的图片。请先打开图片,并加载要处理的图片</td></tr>')
+        } else {
+            ai_btn.prop("disabled", true);
+            ai_btn.text('AI诊断中');
+            $.ajax({
+                url: `/ai_treat/?pic=${temppic}`,
+                method: 'get',
+                timeout: 300000, // timeout 300 秒，这是一个消耗时间的业务
+                success: function( result ) {
+                    if (result.status === 'success'){
+                        resultArea.html(`<tr>
+                                        <td id="benigin">${result.data[0]}</td>
+                                        <td id="malignant">${result.data[1]}</td>
+                                        <td id="uncertain">${result.data[2]}</td>
+                                     </tr>`);
+                        ai_btn.removeAttr('disabled');
+                        ai_btn.text('AI诊断');
+                    } else {
+                        confirm(result.msg);
+                        resultArea.html(`<tr><td colspan="4" rowspan="3" style="color: red;">${result.msg}</td></tr>`)
+                        ai_btn.removeAttr('disabled');
+                        ai_btn.text('AI诊断');
+                    }
+                    var id = patientInfo.patientID.value
+                    var name = patientInfo.patientName.value
+                    var gender = patientInfo.patientGender.value
+                    var age = patientInfo.patientAge.value
+                    var benigin = $('#benigin')[0].innerHTML
+                    var malignant = $('#malignant')[0].innerHTML
+                    var uncertain = $('#uncertain')[0].innerHTML
+                    $('#printBtn')[0].innerHTML="<a id='printhref' href='print_report/"+temppic+"/"+id+"/"+name+"/"+gender+"/"+age+"/"+benigin+"/"+malignant+"/"+uncertain+"' style='text-decoration: none;color:black'>打印</a> "
+                    },
+                error: function( result ) {
+                    // 一般是网站系统出现故障
+                    resultArea.html(`<tr><td colspan="4" rowspan="3" style="color: red;">在线诊断功能出现异常，请稍后重试，或者通知管理员</td></tr>`);
+                    ai_btn.removeAttr('disabled');
+                    ai_btn.text('AI诊断');
+                }
+
+            })
+        }
+    }
+
+
+    $(function(){
+        $("#patientInfo").change(function(e){
+            console.log(patientInfo.patientID.value)
+            console.log(patientInfo.patientName.value)
+            console.log(patientInfo.patientGender.value)
+            console.log(patientInfo.patientAge.value)
+            if($('#AITreat')[0].style.color==='grey'){
+                return
+            }else{
+                temppic = $('#mhd').val();
+                var id = patientInfo.patientID.value
+                var name = patientInfo.patientName.value
+                var gender = patientInfo.patientGender.value
+                var age = patientInfo.patientAge.value
+                var benigin = $('#benigin')[0].innerHTML
+                var malignant = $('#malignant')[0].innerHTML
+                var uncertain = $('#uncertain')[0].innerHTML
+                $('#printBtn')[0].innerHTML="<a id='printhref' href='print_report/"+temppic+"/"+id+"/"+name+"/"+gender+"/"+age+"/"+benigin+"/"+malignant+"/"+uncertain+"' style='text-decoration: none;color:black'>打印</a> "
+            }
+        })
+    })
+
+
+
+
+</script>
+
+{% include 'footer/footer.html' %}
